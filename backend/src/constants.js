@@ -1,0 +1,1 @@
+export const DB_NAME = "LnF_db"
