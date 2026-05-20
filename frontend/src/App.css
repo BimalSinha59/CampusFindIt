@@ -1,0 +1,7 @@
+body{
+  background-color: #303030;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 300px;
+}
