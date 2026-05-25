@@ -52,7 +52,7 @@ Create `.env` profiles inside their respective server and client root folders.
 #### Backend Directory Server (`/backend/.env`)
 ```env
 PORT=5000
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/databaseName
+MONGODB_URI=your_mongodb_uri
 JWT_SECRET=your_super_secure_long_random_string_secret
 CORS_ORIGIN=http://localhost:5173
 BCRYPT_SALT_ROUNDS=your_bcrypt_salt_rounds
@@ -61,7 +61,7 @@ BCRYPT_SALT_ROUNDS=your_bcrypt_salt_rounds
 ```env
 VITE_API_URL=http://localhost:5000/api/v1
 VITE_BACKEND_URL=http://localhost:5000
-VITE_CLOUDINARY_API_URL=https://api.cloudinary.com/v1_1/your_cloud_name/image/upload
+VITE_CLOUDINARY_API_URL=your_cloudinary_api_url
 VITE_CLOUDINARY_PRESET_NAME=your_unsigned_upload_preset
 ```
 
