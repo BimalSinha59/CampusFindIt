@@ -17,14 +17,19 @@ const ItemDetail = () => {
     const currentUser = JSON.parse(localStorage.getItem('user'));
     const token = localStorage.getItem('token');
 
+    // Safely extract the primitive ID string to use out of the render loop
+    const currentUserId = currentUser?._id;
+
     useEffect(() => {
         const fetchItemData = async () => {
             try {
+                // Fetch basic item information
                 const res = await apiClient.get(`/items/${id}`);
                 setItem(res.data.data);
 
-                if (currentUser) {
-                    const claimsRes = await apiClient.get(`/claims/my-items/${currentUser._id}`);
+                // Check for existing claims safely
+                if (currentUserId) {
+                    const claimsRes = await apiClient.get(`/claims/my-items/${currentUserId}`);
                     const existingClaim = claimsRes.data.data.find(c => c.item?._id === id);
                     if (existingClaim) setHasAlreadyClaimed(true);
                 }
@@ -34,8 +39,10 @@ const ItemDetail = () => {
                 setLoading(false);
             }
         };
+        
         fetchItemData();
-    }, [id, currentUser?._id, currentUser]);
+        
+    }, [id, currentUserId]); 
 
     const handleClaimSubmit = async (e) => {
         e.preventDefault();
@@ -45,7 +52,7 @@ const ItemDetail = () => {
         try {
             await apiClient.post('/claims', {
                 item: id,
-                claimant: currentUser._id,
+                claimant: currentUserId,
                 answer: claimData.answer
             });
             setShowModal(false);
@@ -76,7 +83,7 @@ const ItemDetail = () => {
 
     if (!item) return <div className="py-20 text-xl font-bold text-center opacity-50">Item not found.</div>;
 
-    const isOwner = currentUser?._id === item.owner?._id;
+    const isOwner = currentUserId === item.owner?._id;
 
     return (
         <div className="max-w-4xl p-6 mx-auto transition-colors duration-300">

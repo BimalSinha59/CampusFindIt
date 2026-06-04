@@ -53,7 +53,7 @@ const Register = () => {
                                 <input
                                     type="text"
                                     required
-                                    placeholder="John Doe"
+                                    placeholder="Enter your full name"
                                     className="w-full pl-12 transition-all input input-bordered input-primary bg-base-200 focus:bg-base-100 rounded-2xl"
                                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                                 />
@@ -70,7 +70,7 @@ const Register = () => {
                                 <input
                                     type="email"
                                     required
-                                    placeholder="student_name@example.com"
+                                    placeholder="Enter your email"
                                     className="w-full pl-12 transition-all input input-bordered input-primary bg-base-200 focus:bg-base-100 rounded-2xl"
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     autoComplete="email"
@@ -88,7 +88,7 @@ const Register = () => {
                                 <input
                                     type="password"
                                     required
-                                    placeholder="••••••••"
+                                    placeholder="Make a strong password"
                                     className="w-full pl-12 transition-all input input-bordered input-primary bg-base-200 focus:bg-base-100 rounded-2xl"
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     autoComplete="new-password"

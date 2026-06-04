@@ -105,7 +105,7 @@ const ChatPage = ({ currentUser }) => {
             {/* Sidebar */}
             <div className={`flex-col border-r md:border w-full md:w-96 bg-base-100 md:rounded-3xl border-base-300 transition-all ${currentChat ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-6 border-b border-base-200">
-                    <h2 className="text-2xl font-black tracking-tighter uppercase">Inbox</h2>
+                    <h2 className="text-2xl font-black tracking-tighter">Inbox</h2>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {conversations.length === 0 ? (

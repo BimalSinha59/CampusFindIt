@@ -79,7 +79,7 @@ const MyClaims = () => {
                     <div className="p-2 rounded-lg bg-secondary/10 text-secondary">
                         <Package size={24} />
                     </div>
-                    <h1 className="text-4xl font-black tracking-tight uppercase text-base-content">My Claims</h1>
+                    <h1 className="text-4xl font-black tracking-tight text-base-content">My Claims</h1>
                 </div>
                 <p className="font-medium text-base-content/60">
                     Track items you've claimed. You can chat once the reporter initiates the conversation.
