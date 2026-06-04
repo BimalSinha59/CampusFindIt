@@ -60,11 +60,11 @@ graph TD
 | Layer | Technology |
 |---|---|
 | Frontend | React.js, Vite, Tailwind CSS, DaisyUI |
-| Backend | Node.js, Express.js |
+| Backend | Node.js, Express.js, Multer |
 | Real-time | Socket.io (WebSockets) |
 | Database | MongoDB Atlas, Mongoose |
 | Auth | JWT (JSON Web Tokens), bcrypt |
-| Media | Cloudinary (direct browser upload) |
+| Media | Cloudinary (Backend Stream Upload) |
 | Deployment | Vercel (frontend), Render (backend) |
 
 ---
