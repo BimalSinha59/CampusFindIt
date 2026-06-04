@@ -33,28 +33,23 @@ const ReportItem = () => {
         setLoading(true);
 
         try {
-            const data = new FormData();
-            data.append("file", image);
+            const uploadPayload = new FormData();
             
-            const PRESET_NAME = import.meta.env.VITE_CLOUDINARY_PRESET_NAME;
-            const API_URL = import.meta.env.VITE_CLOUDINARY_API_URL;
-            
-            data.append("upload_preset", PRESET_NAME); 
+            uploadPayload.append("image", image); 
 
-            // Upload to Cloudinary
-            const cloudRes = await fetch(API_URL, {
-                method: "POST",
-                body: data
+            const mediaResponse = await apiClient.post('/upload-item-image', uploadPayload, {
+                headers: { 
+                    'Content-Type': 'multipart/form-data' 
+                }
             });
             
-            if (!cloudRes.ok) {
-                const errorData = await cloudRes.json().catch(() => ({}));
-                throw new Error(errorData.error?.message || `Cloudinary upload failed with status ${cloudRes.status}`);
+            if (!mediaResponse.data || !mediaResponse.data.success) {
+                throw new Error("Cloudinary secure upload pipeline failed via backend.");
             }
             
-            const cloudData = await cloudRes.json();
-            const imageUrl = cloudData.secure_url;
-            const aiTagsFromCloud = cloudData.tags || [];
+            // Extract the generated public secure url strings and AI tag arrays returned from the proxy
+            const imageUrl = mediaResponse.data.imageUrl;
+            const aiTagsFromCloud = mediaResponse.data.aiTags || [];
 
             const savedUser = localStorage.getItem('user');
             if (!savedUser) {
@@ -62,6 +57,7 @@ const ReportItem = () => {
             }
             const userData = JSON.parse(savedUser);
 
+            // Assemble complete structural model payload for storage mapping
             const finalData = { 
                 title: formData.title,
                 description: formData.description,
@@ -77,12 +73,14 @@ const ReportItem = () => {
                     .filter(Boolean)
             };
 
+            // Save the document down into item collection
             await apiClient.post('/items', finalData);
             navigate('/'); 
 
         } catch (error) {
             console.error("Submission error details:", error);
-            alert(error.message || "Failed to report item");
+            
+            alert(error.response?.data?.message || error.message || "Failed to report item");
         } finally {
             setLoading(false);
         }
@@ -91,7 +89,21 @@ const ReportItem = () => {
     return (
         <div className="min-h-screen px-4 py-12 transition-colors duration-300 bg-base-200">
             <div className="max-w-2xl mx-auto border shadow-xl card bg-base-100 border-base-300">
+                
                 <div className="p-8 card-body">
+                    {/* Preventive Alert Banner */}
+                    <div className="mb-6 border shadow-sm alert alert-info rounded-3xl bg-info/10 border-info/20 text-base-content">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="w-6 h-6 stroke-info shrink-0">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <h3 className="text-sm font-bold md:text-base">Quick Tip</h3>
+                            <p className="text-xs md:text-sm opacity-80 mt-0.5">
+                                Please search existing listings in the home page before submitting a post. If your item is already registered as Lost or Found, you can claim it directly.
+                            </p>
+                        </div>
+                    </div>
+
                     {/* Header */}
                     <div className="mb-8">
                         <h2 className="text-3xl font-black tracking-tight text-base-content">Report an Item</h2>
@@ -159,6 +171,7 @@ const ReportItem = () => {
                             <input 
                                 type="text" placeholder="e.g., Blue HydroFlask Bottle" required
                                 className="w-full transition-all input input-bordered input-primary bg-base-200 rounded-2xl"
+                                value={formData.title}
                                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                             />
                         </div>
@@ -168,6 +181,7 @@ const ReportItem = () => {
                             <textarea 
                                 placeholder="Provide specific details (scratches, stickers, etc.)" required
                                 className="w-full leading-relaxed transition-all textarea textarea-bordered textarea-primary bg-base-200 h-28 rounded-2xl"
+                                value={formData.description}
                                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                             />
                         </div>
@@ -177,6 +191,7 @@ const ReportItem = () => {
                             <input 
                                 type="text" placeholder="e.g., Library 3rd Floor" required
                                 className="w-full transition-all input input-bordered input-primary bg-base-200 rounded-2xl"
+                                value={formData.location}
                                 onChange={(e) => setFormData({...formData, location: e.target.value})}
                             />
                         </div>
@@ -193,6 +208,7 @@ const ReportItem = () => {
                                         type="text" required
                                         placeholder="e.g., What is the lock screen wallpaper?"
                                         className="w-full input input-bordered input-primary bg-base-100 rounded-2xl"
+                                        value={formData.claimQuestion}
                                         onChange={(e) => setFormData({...formData, claimQuestion: e.target.value})}
                                     />
                                 </div>

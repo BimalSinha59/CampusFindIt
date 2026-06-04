@@ -58,7 +58,7 @@ const Login = () => {
                                 <input
                                     type="email"
                                     required
-                                    placeholder="student_name@example.com"
+                                    placeholder="Enter your registered email"
                                     className="w-full pl-12 transition-all input input-bordered input-primary bg-base-200 focus:bg-base-100 rounded-2xl"
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     autoComplete="email"
@@ -76,7 +76,7 @@ const Login = () => {
                                 <input
                                     type="password"
                                     required
-                                    placeholder="••••••••"
+                                placeholder="Enter your password"
                                     className="w-full pl-12 transition-all input input-bordered input-primary bg-base-200 focus:bg-base-100 rounded-2xl"
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     autoComplete="current-password"

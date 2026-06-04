@@ -4,6 +4,7 @@ import itemRouter from "./routes/item.routes.js";
 import claimRouter from "./routes/claim.routes.js";
 import userRouter from "./routes/user.routes.js";
 import chatRoutes from './routes/chat.routes.js';
+import uploadRouter from './routes/upload.routes.js';
 import { Server } from "socket.io";
 import http from "http";
 import dotenv from "dotenv";
@@ -62,5 +63,6 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/items", itemRouter);
 app.use("/api/v1/claims", claimRouter);
 app.use("/api/v1/chats", chatRoutes);
+app.use('/api/v1', uploadRouter);
 
 export { app, server, io };
