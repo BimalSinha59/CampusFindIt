@@ -18,13 +18,13 @@ A real-time Lost & Found portal built for college campuses. Students post lost o
 
 ## Key Technical Decisions
 
-**Direct-to-CDN image uploads**
-Images upload from the browser directly to Cloudinary, bypassing the backend entirely. The server only receives a lightweight URL string. This keeps binary data off the Node.js event loop and avoids multipart/form-data parsing overhead on the server.
+**Secure Server-Side Media Processing:**
+To protect API keys and ensure strict validation, media uploads are routed securely through the Node.js/Express backend to Cloudinary via multipart form data parsing (`multer`). This pattern prevents the exposure of unsigned upload presets on the client-side, allows the backend to validate file constraints (size, MIME type) before processing, and centralizes media storage management securely on the server.
 
-**WebSocket authentication via `io.use()` middleware**
+**WebSocket authentication via `io.use()` middleware:**
 HTTP requests carry JWTs in the `Authorization` header, but browser WebSocket connections don't support custom headers. Tokens are passed in the Socket.io handshake `auth` object and validated in server-side `io.use()` middleware before any socket connection is established — unauthenticated clients never reach a room.
 
-**Mongoose cascade middleware for referential integrity**
+**Mongoose cascade middleware for referential integrity:**
 MongoDB has no native foreign key constraints. When an item post is deleted or resolved, `pre('deleteOne')` hooks automatically clean up associated chat rooms and messages, preventing orphaned documents across collections.
 
 ---
@@ -50,6 +50,7 @@ graph TD
 ```
 
 **Deployment:** Frontend on Vercel, backend on Render
+
 **Auth flow:** Stateless JWT — signed on login, verified in Express middleware on every protected route and in `io.use()` for socket connections
 
 ---
@@ -97,6 +98,9 @@ MONGODB_URI=your_mongodb_uri
 JWT_SECRET=your_jwt_secret_key
 CORS_ORIGIN=http://localhost:5173
 BCRYPT_SALT_ROUNDS=your_bcrypt_salt_rounds
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 ```bash
@@ -115,8 +119,6 @@ Create `frontend/.env`:
 ```env
 VITE_API_URL=http://localhost:5000/api/v1
 VITE_BACKEND_URL=http://localhost:5000
-VITE_CLOUDINARY_API_URL=your_cloudinary_api_url
-VITE_CLOUDINARY_PRESET_NAME=your_unsigned_preset
 ```
 
 ```bash
