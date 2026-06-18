@@ -136,7 +136,7 @@ const Dashboard = () => {
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-2">
                                                 <h3 className="text-xl font-bold uppercase">{claim.item?.title}</h3>
-                                                <span className="badge badge-sm badge-secondary badge-outline">{claim.item?.itemType}</span>
+                                                <span className={`px-3 py-1 text-[10px] font-black uppercase shadow-lg badge ${claim.item?.itemType === 'LOST' ? 'badge-error' : 'badge-success'} border-none text-white`}>{claim.item?.itemType}</span>
                                             </div>
                                             
                                             <div className="flex items-center gap-2 text-sm">

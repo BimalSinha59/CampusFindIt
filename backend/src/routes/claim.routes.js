@@ -6,11 +6,12 @@ import {
     updateClaimStatus,
     deleteClaim
 } from "../controllers/claim.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
 // Create a new claim
-router.route("/").post(createClaim);
+router.route("/").post(verifyJWT, createClaim);
 
 // Get claims received for items posted BY the user (Reporter Dashboard)
 router.route("/my-items/:userId").get(getMyItemsClaims);

@@ -30,4 +30,6 @@ const claimSchema = new Schema(
     }
 );
 
+claimSchema.index({ item: 1, claimant: 1 }, { unique: true });
+
 export const Claim = mongoose.model("Claim", claimSchema);

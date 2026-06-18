@@ -4,7 +4,9 @@ import io from 'socket.io-client';
 import apiClient from '../api/axios';
 import { Send, Package, MessageSquare, ChevronLeft, Loader2 } from 'lucide-react';
 
-const socket = io(import.meta.env.VITE_BACKEND_URL);
+const socket = io(import.meta.env.VITE_BACKEND_URL, {
+    auth: { token: localStorage.getItem('token') }
+});
 
 const ChatPage = ({ currentUser }) => {
     const location = useLocation();

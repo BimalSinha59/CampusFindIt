@@ -8,6 +8,7 @@ import uploadRouter from './routes/upload.routes.js';
 import { Server } from "socket.io";
 import http from "http";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 
 dotenv.config({
     path: './.env',
@@ -38,6 +39,18 @@ const io = new Server(server, {
     },
     // Adding this helps prevent some polling-related 404s
     allowEIO3: true 
+});
+
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error("No token provided"));
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.user = decoded; 
+        next();
+    } catch (err) {
+        next(new Error("Invalid token"));
+    }
 });
 
 io.on("connection", (socket) => {

@@ -5,9 +5,11 @@ import { Conversation } from "../models/chat.model.js";
 // Create a new lost/found item
 export const createItem = async (req, res) => {
     try {
-        const { title, description, itemType, category, location, image, aiTags, owner, claimQuestion } = req.body;
+        const { title, description, itemType, category, location, image, aiTags, claimQuestion } = req.body;
 
-        if (!title || !itemType || !image || !owner) {
+        const owner = req.user._id; 
+
+        if (!title || !itemType || !image) {
             return res.status(400).json({ success: false, message: "Required fields are missing" });
         }
 
@@ -64,6 +66,10 @@ export const deleteItem = async (req, res) => {
         const item = await Item.findById(itemId);
         if (!item) {
             return res.status(404).json({ success: false, message: "Item not found" });
+        }
+
+        if (item.owner.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: "Not authorized to delete this item" });
         }
 
         await Claim.deleteMany({ item: itemId });

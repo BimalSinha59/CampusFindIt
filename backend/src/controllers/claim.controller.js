@@ -5,14 +5,17 @@ import { Conversation, Message } from "../models/chat.model.js";
 // Create a new claim request
 export const createClaim = async (req, res) => {
     try {
-        const { item, claimant, answer, proofImage } = req.body;
+        const { item, answer, proofImage } = req.body;
+
+        const claimant = req.user._id; 
 
         const targetItem = await Item.findById(item);
+
         if (!targetItem) {
             return res.status(404).json({ success: false, message: "Item not found" });
         }
 
-        if (targetItem.owner.toString() === claimant) {
+        if (targetItem.owner.toString() === claimant.toString()) {
             return res.status(400).json({ success: false, message: "You cannot claim your own reported item" });
         }
 

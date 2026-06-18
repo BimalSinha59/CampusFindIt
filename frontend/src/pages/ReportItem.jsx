@@ -51,12 +51,6 @@ const ReportItem = () => {
             const imageUrl = mediaResponse.data.imageUrl;
             const aiTagsFromCloud = mediaResponse.data.aiTags || [];
 
-            const savedUser = localStorage.getItem('user');
-            if (!savedUser) {
-                throw new Error("User session not found. Please log in again.");
-            }
-            const userData = JSON.parse(savedUser);
-
             // Assemble complete structural model payload for storage mapping
             const finalData = { 
                 title: formData.title,
@@ -65,8 +59,6 @@ const ReportItem = () => {
                 itemType: formData.itemType,
                 category: formData.category,
                 image: imageUrl,
-                owner: userData._id,
-                
                 claimQuestion: formData.itemType === 'FOUND' ? formData.claimQuestion : undefined,
                 
                 aiTags: [...new Set([...aiTagsFromCloud, formData.category?.toLowerCase()])]

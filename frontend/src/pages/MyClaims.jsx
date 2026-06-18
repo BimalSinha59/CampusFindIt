@@ -108,7 +108,7 @@ const MyClaims = () => {
                                     className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
                                 />
                                 <div className="absolute top-3 left-3">
-                                    <div className={`px-3 py-1 text-[10px] font-black uppercase shadow-lg badge ${claim.item?.itemType === 'Lost' ? 'badge-error' : 'badge-success'} border-none text-white`}>
+                                    <div className={`px-3 py-1 text-[10px] font-black uppercase shadow-lg badge ${claim.item?.itemType === 'LOST' ? 'badge-error' : 'badge-success'} border-none text-white`}>
                                         {claim.item?.itemType}
                                     </div>
                                 </div>
