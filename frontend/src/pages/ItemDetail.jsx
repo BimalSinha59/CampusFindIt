@@ -29,8 +29,11 @@ const ItemDetail = () => {
 
                 // Check for existing claims safely
                 if (currentUserId) {
-                    const claimsRes = await apiClient.get(`/claims/my-items/${currentUserId}`);
-                    const existingClaim = claimsRes.data.data.find(c => c.item?._id === id);
+                    
+                    const claimsRes = await apiClient.get(`/claims/user/${currentUserId}`);
+                    
+                    const existingClaim = claimsRes.data.data.find(c => c.item?._id?.toString() === id);
+                    
                     if (existingClaim) setHasAlreadyClaimed(true);
                 }
             } catch (err) {
@@ -52,7 +55,6 @@ const ItemDetail = () => {
         try {
             await apiClient.post('/claims', {
                 item: id,
-                claimant: currentUserId,
                 answer: claimData.answer
             });
             setShowModal(false);

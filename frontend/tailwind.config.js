@@ -14,7 +14,7 @@ export default {
     ],
     daisyui: {
         daisyui: {
-            themes: ["forest", "caramellatte"], 
+            themes: ["forest", "emerald"], 
             darkTheme: "forest", 
         }, 
     },

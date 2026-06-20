@@ -1,35 +1,102 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
-import { LogOut, User, SquaresExclude, PlusCircle, LayoutDashboard, Home, Sun, Moon, ClipboardList, MessageSquare } from 'lucide-react';
+import { io } from 'socket.io-client';
+import { LogOut, User, SquaresExclude, PlusCircle, LayoutDashboard, Home, Sun, Moon, ClipboardList, MessageSquare, Bell } from 'lucide-react';
+
+// ─── Notification Socket ─────────────────────────────────────────────────────
+// Created at module level so it's one persistent connection for the whole app.
+// We pass the JWT token in the auth object
+// credentials during the WebSocket handshake (HTTP headers aren't available after the upgrade).
+// The socket is created once regardless of re-renders.
+const notifSocket = io(import.meta.env.VITE_BACKEND_URL, {
+    auth: { token: localStorage.getItem('token') },
+    // Don't auto-connect if there's no token (user not logged in)
+    autoConnect: !!localStorage.getItem('token')
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 const Navbar = () => {
     const navigate = useNavigate();
-    
-    // Get initial state from localStorage
+
+    // Read user and token from localStorage
     const user = JSON.parse(localStorage.getItem('user'));
     const token = localStorage.getItem('token');
+
     const [theme, setTheme] = useState(localStorage.getItem("theme") || "forest");
 
+    // ─── Notification State ───────────────────────────────────────────────────
+    const [notifCount, setNotifCount] = useState(0);
+    const [notifications, setNotifications] = useState([]); // stores last 5 messages
+    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+    const notifRef = useRef(null); // for closing dropdown on outside click
+    // ──────────────────────────────────────────────────────────────────────────
+
+    // Apply theme to HTML element
     useEffect(() => {
         document.querySelector('html').setAttribute('data-theme', theme);
         localStorage.setItem("theme", theme);
     }, [theme]);
 
+    // ─── Socket Notification Listener ────────────────────────────────────────
+    useEffect(() => {
+        if (!token) return; // don't set up listener if not logged in
+
+        // Connect the socket if it isn't already connected
+        if (!notifSocket.connected) {
+            notifSocket.connect();
+        }
+
+        const handleNotification = (data) => {
+            // Increment the unread badge count
+            setNotifCount(prev => prev + 1);
+            // Prepend new notification, keep only last 5
+            setNotifications(prev => [data, ...prev].slice(0, 5));
+        };
+
+        notifSocket.on("new_notification", handleNotification);
+
+        // Cleanup: remove this specific listener when component unmounts
+        return () => {
+            notifSocket.off("new_notification", handleNotification);
+        };
+    }, [token]);
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Close notification dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (notifRef.current && !notifRef.current.contains(e.target)) {
+                setShowNotifDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const handleThemeToggle = () => {
-        setTheme(theme === "caramellatte" ? "forest" : "caramellatte");
+        setTheme(theme === "emerald" ? "forest" : "emerald");
     };
 
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        notifSocket.disconnect(); // cleanly close socket on logout
         navigate('/login');
         window.location.reload();
     };
 
-    const navLinkStyles = ({ isActive }) => 
+    // Mark all notifications as read when dropdown is opened
+    const handleNotifBellClick = () => {
+        setShowNotifDropdown(prev => !prev);
+        if (!showNotifDropdown) {
+            setNotifCount(0); // clear badge when user opens the dropdown
+        }
+    };
+
+    const navLinkStyles = ({ isActive }) =>
         `flex items-center gap-2 px-3 py-2 transition-all duration-200 rounded-lg ${
-            isActive 
-                ? "bg-primary/10 text-primary font-black border-b-2 border-primary rounded-b-none" 
+            isActive
+                ? "bg-primary/10 text-primary font-black border-b-2 border-primary rounded-b-none"
                 : "opacity-70 hover:bg-base-200 font-bold"
         }`;
 
@@ -82,17 +149,75 @@ const Navbar = () => {
                 </ul>
             </div>
 
-            {/* Navbar End: Theme Toggle & User Actions */}
+            {/* Navbar End: Theme Toggle, Notifications & User Actions */}
             <div className="gap-2 navbar-end">
+
+                {/* Theme Toggle */}
                 <label className="btn btn-ghost btn-circle swap swap-rotate text-primary">
-                    <input 
-                        type="checkbox" 
-                        onChange={handleThemeToggle} 
-                        checked={theme === "forest"} 
+                    <input
+                        type="checkbox"
+                        onChange={handleThemeToggle}
+                        checked={theme === "forest"}
                     />
                     <Sun className="swap-on" size={22} />
                     <Moon className="swap-off" size={22} />
                 </label>
+
+                {/* ─── Notification Bell (only shown when logged in) ─── */}
+                {token && (
+                    <div className="relative" ref={notifRef}>
+                        <button
+                            onClick={handleNotifBellClick}
+                            className="relative btn btn-ghost btn-circle"
+                        >
+                            <Bell size={20} className="text-base-content/70" />
+                            {/* Red badge — only shown when there are unread notifications */}
+                            {notifCount > 0 && (
+                                <span className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 text-[9px] font-black text-white bg-error rounded-full">
+                                    {notifCount > 5 ? '5+' : notifCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Notification Dropdown */}
+                        {showNotifDropdown && (
+                            <div className="absolute right-0 mt-2 w-80 bg-base-100 border border-base-300 rounded-2xl shadow-2xl z-[100] overflow-hidden">
+                                <div className="px-4 py-3 border-b border-base-200">
+                                    <p className="text-xs font-black tracking-widest uppercase text-base-content/50">
+                                        Notifications
+                                    </p>
+                                </div>
+                                {notifications.length === 0 ? (
+                                    <div className="px-4 py-8 text-center">
+                                        <Bell size={28} className="mx-auto mb-2 opacity-20" />
+                                        <p className="text-xs font-bold opacity-40">No new notifications</p>
+                                    </div>
+                                ) : (
+                                    <ul>
+                                        {notifications.map((notif, i) => (
+                                            <li
+                                                key={i}
+                                                onClick={() => {
+                                                    setShowNotifDropdown(false);
+                                                    navigate('/dashboard');
+                                                }}
+                                                className="flex items-start gap-3 px-4 py-3 transition-colors border-b cursor-pointer border-base-200 hover:bg-base-200 last:border-b-0"
+                                            >
+                                                <div className="p-1.5 rounded-full bg-primary/10 text-primary shrink-0 mt-0.5">
+                                                    <Bell size={14} />
+                                                </div>
+                                                <p className="text-xs font-medium leading-relaxed text-base-content/80">
+                                                    {notif.message}
+                                                </p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+                {/* ──────────────────────────────────────────────────────── */}
 
                 {token ? (
                     <div className="flex items-center gap-3 ml-2">
@@ -100,7 +225,7 @@ const Navbar = () => {
                             <span className="text-[10px] font-black opacity-40 uppercase tracking-widest">Active</span>
                             <span className="text-sm font-bold text-base-content">{user?.fullName?.split(' ')[0]}</span>
                         </div>
-                        
+
                         <div className="dropdown dropdown-end">
                             <label tabIndex={0} className="overflow-hidden btn btn-ghost btn-circle avatar bg-base-300 ring ring-primary ring-offset-base-100 ring-offset-2">
                                 <div className="flex items-center justify-center w-full h-full font-black uppercase text-primary">
