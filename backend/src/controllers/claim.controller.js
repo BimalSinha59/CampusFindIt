@@ -1,16 +1,16 @@
 import { Claim } from "../models/claim.model.js";
 import { Item } from "../models/item.model.js";
 import { Conversation, Message } from "../models/chat.model.js";
+import { io } from "../app.js";
 
 // Create a new claim request
 export const createClaim = async (req, res) => {
     try {
+        
         const { item, answer, proofImage } = req.body;
-
-        const claimant = req.user._id; 
+        const claimant = req.user._id;
 
         const targetItem = await Item.findById(item);
-
         if (!targetItem) {
             return res.status(404).json({ success: false, message: "Item not found" });
         }
@@ -31,13 +31,24 @@ export const createClaim = async (req, res) => {
             proofImage
         });
 
+        // Fire notification to the item owner's personal socket room.
+        // The owner joined "user:<ownerId>" automatically in app.js when they connected.
+        // req.user.fullName is available because verifyJWT fetches the full User document.
+        io.to(`user:${targetItem.owner}`).emit("new_notification", {
+            type: "NEW_CLAIM",
+            message: `${req.user.fullName} submitted a claim for your item: "${targetItem.title}"`,
+            claimId: claim._id,
+            itemId: targetItem._id
+        });
+
         res.status(201).json({ success: true, data: claim });
     } catch (error) {
+        console.error("createClaim error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// Get all claims received for items posted By the current user (Reporter's Dashboard)
+// Get all claims received for items posted BY the current user (Reporter's Dashboard)
 export const getMyItemsClaims = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -55,7 +66,7 @@ export const getMyItemsClaims = async (req, res) => {
     }
 };
 
-// Get all claims submitted By the current user (Claimant's Tracking Page)
+// Get all claims submitted BY the current user (Claimant's Tracking Page)
 export const getMySubmittedClaims = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -69,15 +80,15 @@ export const getMySubmittedClaims = async (req, res) => {
     }
 };
 
-// Update claim status (APPROVED/REJECTED)
+// Update claim status (APPROVED / REJECTED)
 export const updateClaimStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body; 
+        const { status } = req.body;
 
         const updatedClaim = await Claim.findByIdAndUpdate(
-            id, 
-            { status }, 
+            id,
+            { status },
             { returnDocument: 'after' }
         );
 
@@ -91,29 +102,23 @@ export const updateClaimStatus = async (req, res) => {
     }
 };
 
-// Delete/Reject a claim and cleanup associated chat
+// Delete a claim and clean up associated conversation + messages
 export const deleteClaim = async (req, res) => {
     try {
         const { claimId } = req.params;
-        
-        const conversation = await Conversation.findOneAndDelete({ claimId: claimId });
 
+        const conversation = await Conversation.findOneAndDelete({ claimId });
         if (conversation) {
             await Message.deleteMany({ conversationId: conversation._id });
-        } 
-        
-        const deletedClaim = await Claim.findByIdAndDelete(claimId);
+        }
 
+        const deletedClaim = await Claim.findByIdAndDelete(claimId);
         if (!deletedClaim) {
             return res.status(404).json({ success: false, message: "Claim not found" });
         }
 
-        res.status(200).json({ 
-            success: true, 
-            message: "Claim and associated data deleted." 
-        });
-
-    } catch (error) { 
+        res.status(200).json({ success: true, message: "Claim and associated data deleted." });
+    } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };

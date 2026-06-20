@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import io from 'socket.io-client';
+import { io } from 'socket.io-client';
 import apiClient from '../api/axios';
 import { Send, Package, MessageSquare, ChevronLeft, Loader2 } from 'lucide-react';
 
+// ─── Chat Socket ─────────────────────────────────────────────────────────────
+// Created at module level — one persistent connection for the entire session.
+// Token passed in auth object
+// for sending credentials (HTTP headers aren't usable post-handshake).
 const socket = io(import.meta.env.VITE_BACKEND_URL, {
     auth: { token: localStorage.getItem('token') }
 });
+// ─────────────────────────────────────────────────────────────────────────────
 
 const ChatPage = ({ currentUser }) => {
     const location = useLocation();
@@ -23,12 +28,11 @@ const ChatPage = ({ currentUser }) => {
             const res = await apiClient.get(`/chats/user/${currentUser._id}`);
             const chats = res.data;
             setConversations(chats);
-            
+
             const activeClaimId = location.state?.activeClaimId;
             const stateSelectedChat = location.state?.selectedChat;
 
             if (activeClaimId && !currentChat) {
-                // Find the chat that belongs to the specific claim
                 const targetedChat = chats.find(c => c.claimId === activeClaimId);
                 if (targetedChat) handleSelectChat(targetedChat);
             } else if (stateSelectedChat && !currentChat) {
@@ -45,7 +49,7 @@ const ChatPage = ({ currentUser }) => {
         fetchConversations();
     }, [fetchConversations]);
 
-    // Selecting a Chat
+    // Selecting a Chat — join its Socket.io room
     const handleSelectChat = async (chat) => {
         setCurrentChat(chat);
         socket.emit("join_chat", chat._id);
@@ -57,53 +61,68 @@ const ChatPage = ({ currentUser }) => {
         }
     };
 
-    // Real-time listener
+    // Real-time message listener
+    // The cleanup (socket.off) is critical — without it, StrictMode double-mount
+    // or dependency changes would stack multiple listeners causing duplicate messages.
     useEffect(() => {
         const handleNewMessage = (data) => {
             if (currentChat?._id === data.conversationId) {
                 setMessages((prev) => [...prev, data]);
             }
-            fetchConversations(); 
+            fetchConversations();
         };
 
         socket.on("receive_message", handleNewMessage);
         return () => socket.off("receive_message", handleNewMessage);
     }, [currentChat?._id, fetchConversations]);
 
-    // Send Message
+    // Reconnect to chat room if socket reconnects (e.g. after Render cold start)
+    useEffect(() => {
+        const handleReconnect = () => {
+            if (currentChat?._id) {
+                socket.emit("join_chat", currentChat._id);
+            }
+        };
+        socket.on("connect", handleReconnect);
+        return () => socket.off("connect", handleReconnect);
+    }, [currentChat?._id]);
+
+    // Send Message — save to DB first via REST, then emit over socket
+    // This guarantees persistence even if socket delivery fails
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !currentChat) return;
 
         const payload = {
             conversationId: currentChat._id,
-            sender: currentUser._id, 
+            sender: currentUser._id,
             text: newMessage
         };
 
         try {
             const { data } = await apiClient.post('/chats/message', payload);
-            socket.emit("send_message", data); 
+            socket.emit("send_message", data);
             setNewMessage("");
         } catch (err) {
             console.error("Message Error:", err.response?.data);
         }
     };
 
+    // Auto-scroll to latest message
     useEffect(() => {
         scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center h-screen gap-3 bg-base-100">
-            <Loader2 className="animate-spin text-primary" size={48}/>
+            <Loader2 className="animate-spin text-primary" size={48} />
             <p className="text-xs font-black tracking-widest uppercase opacity-40">Syncing Messages...</p>
         </div>
     );
 
     return (
         <div className="flex h-[calc(100vh-64px)] bg-base-200 p-0 md:p-4 gap-0 md:gap-4 overflow-hidden">
-            
+
             {/* Sidebar */}
             <div className={`flex-col border-r md:border w-full md:w-96 bg-base-100 md:rounded-3xl border-base-300 transition-all ${currentChat ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-6 border-b border-base-200">
@@ -116,9 +135,9 @@ const ChatPage = ({ currentUser }) => {
                         conversations.map((chat) => {
                             const otherUser = chat.participants.find(p => p._id !== currentUser._id);
                             return (
-                                <button 
-                                    key={chat._id} 
-                                    onClick={() => handleSelectChat(chat)} 
+                                <button
+                                    key={chat._id}
+                                    onClick={() => handleSelectChat(chat)}
                                     className={`w-full p-5 flex items-center gap-4 border-b border-base-200 transition-all hover:bg-base-200 ${currentChat?._id === chat._id ? 'bg-primary/10 border-r-4 border-r-primary' : ''}`}
                                 >
                                     <div className="avatar placeholder">
@@ -144,8 +163,8 @@ const ChatPage = ({ currentUser }) => {
                     <>
                         <div className="z-10 flex items-center justify-between p-4 border-b bg-base-100/80 backdrop-blur">
                             <div className="flex items-center gap-3">
-                                <button onClick={() => setCurrentChat(null)} className="md:hidden btn btn-ghost btn-circle btn-sm"><ChevronLeft/></button>
-                                <div className="hidden sm:flex p-2.5 rounded-xl bg-primary text-primary-content shadow-lg shadow-primary/20"><Package size={20}/></div>
+                                <button onClick={() => setCurrentChat(null)} className="md:hidden btn btn-ghost btn-circle btn-sm"><ChevronLeft /></button>
+                                <div className="hidden sm:flex p-2.5 rounded-xl bg-primary text-primary-content shadow-lg shadow-primary/20"><Package size={20} /></div>
                                 <div>
                                     <h3 className="text-sm font-black leading-tight uppercase">
                                         {currentChat.participants.find(p => p._id !== currentUser._id)?.fullName}
@@ -169,17 +188,17 @@ const ChatPage = ({ currentUser }) => {
                                     </div>
                                 );
                             })}
-                            <div ref={scrollRef}/>
+                            <div ref={scrollRef} />
                         </div>
 
                         <div className="p-4 border-t bg-base-100 border-base-200">
                             <form onSubmit={handleSendMessage} className="flex max-w-4xl gap-2 mx-auto">
-                                <input 
-                                    value={newMessage} 
-                                    onChange={(e) => setNewMessage(e.target.value)} 
-                                    type="text" 
-                                    placeholder="Write a message..." 
-                                    className="flex-1 text-sm font-bold transition-all border-none input input-bordered bg-base-200/50 rounded-2xl focus:ring-2 focus:ring-primary" 
+                                <input
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    type="text"
+                                    placeholder="Write a message..."
+                                    className="flex-1 text-sm font-bold transition-all border-none input input-bordered bg-base-200/50 rounded-2xl focus:ring-2 focus:ring-primary"
                                 />
                                 <button type="submit" className="px-6 shadow-lg btn btn-primary rounded-2xl shadow-primary/30">
                                     <Send size={18} className="md:mr-2" />
@@ -191,7 +210,7 @@ const ChatPage = ({ currentUser }) => {
                 ) : (
                     <div className="flex flex-col items-center justify-center flex-1 bg-base-200/20">
                         <div className="p-8 mb-6 rounded-full bg-base-200 text-base-content/10">
-                            <MessageSquare size={100} strokeWidth={1}/>
+                            <MessageSquare size={100} strokeWidth={1} />
                         </div>
                         <h2 className="text-xl font-black uppercase tracking-[0.3em] opacity-20">Select a conversation</h2>
                         <p className="mt-2 text-xs font-bold opacity-10">Your secure messages will appear here</p>

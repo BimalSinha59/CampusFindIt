@@ -12,7 +12,7 @@ import jwt from "jsonwebtoken";
 
 dotenv.config({
     path: './.env',
-    quiet:true 
+    quiet: true
 })
 
 const app = express();
@@ -37,33 +37,55 @@ const io = new Server(server, {
         methods: ["GET", "POST"],
         credentials: true
     },
-    // Adding this helps prevent some polling-related 404s
-    allowEIO3: true 
+    allowEIO3: true
 });
 
+// ─── Socket.io JWT Middleware ───────────────────────────────────────────────
+// This runs before EVERY socket connection is accepted.
+// It reads the token from socket.handshake.auth.token (sent by the frontend),
+// verifies it, and attaches the decoded user to socket.user.
+// If the token is missing or invalid, the connection is rejected immediately.
 io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error("No token provided"));
+
+    if (!token) {
+        // Allow connection without token but socket.user will be undefined.
+        // This handles unauthenticated pages gracefully instead of hard-rejecting.
+        return next();
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        socket.user = decoded; 
+        socket.user = decoded; // now available inside all socket event handlers
         next();
     } catch (err) {
-        next(new Error("Invalid token"));
+        // Token invalid or expired — reject the connection
+        return next(new Error("Invalid or expired token"));
     }
 });
 
+// ─── Socket.io Connection Handler ───────────────────────────────────────────
 io.on("connection", (socket) => {
-    
+
+    // If this socket belongs to an authenticated user,
+    // join them into their personal notification room: "user:<userId>"
+    // This is how we send targeted notifications to a specific user.
+    if (socket.user?._id) {
+        socket.join(`user:${socket.user._id}`);
+    }
+
+    // Chat room join — for item-specific chat rooms
     socket.on("join_chat", (conversationId) => {
         socket.join(conversationId);
     });
 
+    // Chat message broadcast — emit to the specific chat room only
     socket.on("send_message", (data) => {
         io.to(data.conversationId).emit("receive_message", data);
     });
 
     socket.on("disconnect", () => {
+        // Socket.io automatically removes the socket from all rooms on disconnect
     });
 });
 
