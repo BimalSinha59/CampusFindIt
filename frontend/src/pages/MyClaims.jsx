@@ -101,11 +101,11 @@ const MyClaims = () => {
                 <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                     {myClaims.map((claim) => (
                         <div key={claim._id} className="overflow-hidden transition-all border shadow-md group hover:shadow-2xl card bg-base-100 border-base-200 hover:-translate-y-1 rounded-3xl">
-                            <figure className="relative h-48 overflow-hidden">
+                            <figure className="relative w-full overflow-hidden bg-base-200" style={{ height: '240px' }}>
                                 <img 
                                     src={claim.item?.image || 'https://via.placeholder.com/400x300?text=No+Image'} 
                                     alt={claim.item?.title} 
-                                    className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+                                    className="object-contain w-full h-full transition-transform duration-500 group-hover:scale-105"
                                 />
                                 <div className="absolute top-3 left-3">
                                     <div className={`px-3 py-1 text-[10px] font-black uppercase shadow-lg badge ${claim.item?.itemType === 'LOST' ? 'badge-error' : 'badge-success'} border-none text-white`}>
