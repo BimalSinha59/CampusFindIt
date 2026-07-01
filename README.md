@@ -1,6 +1,6 @@
 # CampusFindIt
 
-A real-time Lost & Found portal built for college campuses. Students post lost or found items and communicate directly with each other through live chat — no more scattered WhatsApp groups or notice boards.
+A real-time Lost & Found portal built for college campuses. Students post lost or found items, search using AI-enriched tags, and communicate directly with each other through a verified claim workflow and live chat — no more scattered WhatsApp groups or notice boards.
 
 **[Live Application →](https://campus-find-it.vercel.app)**
 
@@ -8,11 +8,14 @@ A real-time Lost & Found portal built for college campuses. Students post lost o
 
 ## What it does
 
-- Post lost or found items with photos, category, and location details
-- Browse and search items posted across campus
-- Claim an item and instantly open a private real-time chat with the owner
-- Receive and send messages without page refresh via persistent WebSocket connections
-- Secure authentication with JWT — only verified users can post or claim
+- Post lost or found items with photos, category, location, and a verification question
+- Search items using server-side full-text search across titles, descriptions, and AI-generated tags
+- Filter items by type (LOST / FOUND) and category in real time
+- Submit a claim by answering the reporter's verification question
+- Receive an instant Socket.io notification when someone claims your item
+- Approve or reject claims from your dashboard — approved claims unlock a private chat
+- Chat in real time with the other party through persistent WebSocket connections
+- Secure authentication with JWT — owner identity always derived server-side from the token, never from the request body
 
 ---
 
@@ -24,8 +27,8 @@ To protect API keys and ensure strict validation, media uploads are routed secur
 **WebSocket authentication via `io.use()` middleware:**
 HTTP requests carry JWTs in the `Authorization` header, but browser WebSocket connections don't support custom headers. Tokens are passed in the Socket.io handshake `auth` object and validated in server-side `io.use()` middleware before any socket connection is established — unauthenticated clients never reach a room.
 
-**Mongoose cascade middleware for referential integrity:**
-MongoDB has no native foreign key constraints. When an item post is deleted or resolved, `pre('deleteOne')` hooks automatically clean up associated chat rooms and messages, preventing orphaned documents across collections.
+**Explicit cascade deletion for referential integrity:**
+MongoDB has no native foreign key constraints. When an item is deleted, the controller explicitly deletes all associated Claims and Conversations in sequence. When a claim is deleted, its Conversation and all Messages are removed first. This keeps the database clean without relying on Mongoose hooks, making the deletion logic visible and auditable in the controller layer.
 
 ---
 
@@ -51,7 +54,11 @@ graph TD
 
 **Deployment:** Frontend on Vercel, backend on Render
 
-**Auth flow:** Stateless JWT — signed on login, verified in Express middleware on every protected route and in `io.use()` for socket connections
+**Auth flow:** Stateless JWT — signed on login, verified in Express `verifyJWT` middleware on every protected route, and in `io.use()` for socket connections. Owner identity is always read from the verified token, never trusted from the request body.
+ 
+**Socket.io rooms:**
+- `<conversationId>` — isolated per approved claim, joined via `join_chat` event
+- `user:<userId>` — personal room, auto-joined on every authenticated connection for targeted notifications
 
 ---
 
@@ -59,12 +66,13 @@ graph TD
 
 | Layer | Technology |
 |---|---|
-| Frontend | React.js, Vite, Tailwind CSS, DaisyUI |
-| Backend | Node.js, Express.js, Multer |
-| Real-time | Socket.io (WebSockets) |
-| Database | MongoDB Atlas, Mongoose |
-| Auth | JWT (JSON Web Tokens), bcrypt |
-| Media | Cloudinary (Backend Stream Upload) |
+| Frontend | React 19, Vite 8, Tailwind CSS v4, DaisyUI v5 |
+| Backend | Node.js, Express 5, Multer (memoryStorage) |
+| Real-time | Socket.io 4 (WebSockets + personal notification rooms) |
+| Database | MongoDB Atlas, Mongoose 9 |
+| Auth | JWT (jsonwebtoken), bcryptjs |
+| Media & AI | Cloudinary CDN, Google Cloud Vision AI (auto-tagging) |
+| Search | MongoDB `$text` operator, compound text index |
 | Deployment | Vercel (frontend), Render (backend) |
 
 ---
